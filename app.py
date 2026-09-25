@@ -1,9 +1,9 @@
 import pandas as pd
 import streamlit as st
 
-# إعدادات الصفحة
+# إعدادات الصفحة Corrected
 st.set_page_config(
-    page_page_title="نظام تتبع المخلفات الإشعاعية والنظائر المشعة",
+    page_title="نظام تتبع المخلفات الإشعاعية والنظائر المشعة",
     page_icon="☢️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -84,7 +84,7 @@ with st.sidebar.form("add_shipment_form", clear_on_submit=True):
     submitted = st.form_submit_button("➕ إضافة السجل")
 
     if submitted:
-        # الكشف التلقائي عن القيم الشاذة بسيط
+        # الكشف التلقائي عن القيم الشاذة
         if activity > 1000.0:
             status = "تحذير - إشعاع مرتفع"
             ai_note = "قيمة شاذة - يتطلب مراجعة العزل"
