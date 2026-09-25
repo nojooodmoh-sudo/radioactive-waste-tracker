@@ -1,0 +1,189 @@
+import pandas as pd
+import streamlit as st
+
+# إعدادات الصفحة الرئيسية
+st.set_page_config(
+    page_title="نظام تتبع المخلفات الإشعاعية",
+    page_icon="☢️",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+# تصميم الألوان والواجهة العصرية
+st.markdown(
+    """
+    <style>
+    /* ألوان الخلفية والنصوص العامة */
+    .stApp {
+        background-color: #0F172A;
+        color: #F8FAFC;
+    }
+    
+    /* بطاقة الترحيب */
+    .welcome-card {
+        background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+        padding: 22px;
+        border-radius: 16px;
+        border-right: 6px solid #38BDF8;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .welcome-title {
+        color: #38BDF8;
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+    
+    .welcome-text {
+        color: #94A3B8;
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    /* تحسين أزرار التحكم */
+    .stButton>button {
+        background: linear-gradient(90deg, #0EA5E9 0%, #0284C7 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-weight: bold;
+        width: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton>button:hover {
+        background: linear-gradient(90deg, #0284C7 0%, #0369A1 100%);
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+    }
+
+    /* إخفاء عناصر Streamlit الزائدة للخصوصية */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# --- 1. قسم الترحيب والترويسة ---
+st.markdown(
+    """
+    <div class="welcome-card">
+        <div class="welcome-title">أهلاً بك 👋 في نظام التتبع الذكي للنظائر والمخلفات الإشعاعية</div>
+        <div class="welcome-text">
+            تم تصميم هذا النظام لمساعدتك في مراقبة الشحنات الإشعاعية وتتبع حالات التخزين بسهولة والتنبيه التلقائي عن أي قراءات شاذة أو غير آمنة.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# تهيئة قاعدة البيانات في الجلسة
+if "waste_data" not in st.session_state:
+    st.session_state.waste_data = pd.DataFrame(
+        [
+            {
+                "كود الشحنة": "RAD-101",
+                "النظير المشع": "Tc-99m",
+                "النشاط الإشعاعي (mCi)": 450.0,
+                "حالة التخزين": "آمن",
+                "الموقع": "مخزن A-1",
+                "تحليل النظام": "ضمن الحدود الطبيعية",
+            },
+            {
+                "كود الشحنة": "RAD-102",
+                "النظير المشع": "I-131",
+                "النشاط الإشعاعي (mCi)": 1200.0,
+                "حالة التخزين": "تحذير - إشعاع مرتفع",
+                "الموقع": "مخزن B-2",
+                "تحليل النظام": "قيمة شاذة - يتطلب مراجعة العزل",
+            },
+            {
+                "كود الشحنة": "RAD-103",
+                "النظير المشع": "F-18",
+                "النشاط الإشعاعي (mCi)": 300.0,
+                "حالة التخزين": "آمن",
+                "الموقع": "مخزن C-1",
+                "تحليل النظام": "ضمن الحدود الطبيعية",
+            },
+        ]
+    )
+
+# --- 2. ملخص الإحصائيات السريعة ---
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("إجمالي الشحنات", len(st.session_state.waste_data))
+with col2:
+    high_rad = len(
+        st.session_state.waste_data[
+            st.session_state.waste_data["حالة التخزين"].str.contains("تحذير")
+        ]
+    )
+    st.metric("حالات التحذير ⚠️", high_rad)
+with col3:
+    avg_act = st.session_state.waste_data["النشاط الإشعاعي (mCi)"].mean()
+    st.metric("متوسط الإشعاع", f"{avg_act:.1f} mCi")
+
+st.divider()
+
+# --- 3. قسم إضافة شحنة جديدة ---
+with st.expander("➕ **اضغط هنا لإضافة شحنة جديدة بسهولة**", expanded=False):
+    with st.form("add_form", clear_on_submit=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            shipment_code = st.text_input("كود الشحنة", value="RAD-104")
+            isotope = st.selectbox(
+                "النظير المشع", ["Tc-99m", "I-131", "F-18", "غير ذلك"]
+            )
+        with c2:
+            activity = st.number_input(
+                "النشاط الإشعاعي (mCi)", min_value=0.0, value=250.0, step=10.0
+            )
+            location = st.selectbox(
+                "موقع التخزين",
+                ["مخزن A-1", "مخزن B-2", "مخزن C-1", "وحدة التفكيك"],
+            )
+
+        submit = st.form_submit_button("حفظ وإضافة إلى السجل")
+
+        if submit:
+            if activity > 1000.0:
+                status = "تحذير - إشعاع مرتفع"
+                ai_note = "قيمة شاذة - يتطلب مراجعة العزل"
+            else:
+                status = "آمن"
+                ai_note = "ضمن الحدود الطبيعية"
+
+            new_entry = {
+                "كود الشحنة": shipment_code,
+                "النظير المشع": isotope,
+                "النشاط الإشعاعي (mCi)": activity,
+                "حالة التخزين": status,
+                "الموقع": location,
+                "تحليل النظام": ai_note,
+            }
+            st.session_state.waste_data = pd.concat(
+                [st.session_state.waste_data, pd.DataFrame([new_entry])],
+                ignore_index=True,
+            )
+            st.success("✨ تم حفظ الشحنة الجديدة بنجاح!")
+
+# --- 4. عرض البيانات والتنبيهات ---
+st.subheader("📋 سجل الشحنات المباشر")
+st.dataframe(st.session_state.waste_data, use_container_width=True)
+
+st.subheader("🔔 تنبيهات الأمان والحالات الشاذة")
+anomalies = st.session_state.waste_data[
+    st.session_state.waste_data["حالة التخزين"].str.contains("تحذير")
+]
+
+if not anomalies.empty:
+    for idx, row in anomalies.iterrows():
+        st.error(
+            f"⚠️ **تنبيه شحنة [{row['كود الشحنة']}]**: النظير ({row['النظير المشع']}) في {row['الموقع']} يُظهر نشاطاً إشعاعياً مرتفعاً قدره {row['النشاط الإشعاعي (mCi)']} mCi. — *{row['تحليل النظام']}*"
+        )
+else:
+    st.success("✅ جميع الشحنات والمخلفات المسجلة آمنة ومستقرة.")
