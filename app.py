@@ -1,122 +1,114 @@
-import pandas as pd
 import streamlit as st
+import pandas as pd
+from datetime import datetime, date, time
 
-# إعدادات الصفحة
-st.set_page_config(
-    page_title="نظام تتبع المخلفات الإشعاعية",
-    page_icon="☢️",
-    layout="wide",
-)
 
-# 1. الترويسة والترحيب
-st.title("☢️ نظام تتبع المخلفات الإشعاعية والنظائر")
-st.info(
-    "أهلاً بك 👋 في نظام التتبع الذكي! يساعدك هذا التطبيق في متابعة الشحنات وتنبيهك للحالات الشاذة."
-)
+st.set_page_config(page_title="نظام تتبع النفايات المشعة", page_icon="☢️", layout="wide")
 
-# 2. البيانات الأولية
-if "waste_data" not in st.session_state:
-    st.session_state.waste_data = pd.DataFrame(
-        [
-            {
-                "كود الشحنة": "RAD-101",
-                "النظير المشع": "Tc-99m",
-                "النشاط الإشعاعي (mCi)": 450.0,
-                "حالة التخزين": "آمن",
-                "الموقع": "مخزن A-1",
-                "تحليل النظام": "ضمن الحدود الطبيعية",
-            },
-            {
-                "كود الشحنة": "RAD-102",
-                "النظير المشع": "I-131",
-                "النشاط الإشعاعي (mCi)": 1200.0,
-                "حالة التخزين": "تحذير - إشعاع مرتفع",
-                "الموقع": "مخزن B-2",
-                "تحليل النظام": "قيمة شاذة - يتطلب مراجعة العزل",
-            },
-            {
-                "كود الشحنة": "RAD-103",
-                "النظير المشع": "F-18",
-                "النشاط الإشعاعي (mCi)": 300.0,
-                "حالة التخزين": "آمن",
-                "الموقع": "مخزن C-1",
-                "تحليل النظام": "ضمن الحدود الطبيعية",
-            },
-        ]
-    )
+st.title("☢️ نظام تتبع وحصر النفايات المشعة")
+st.write("تسجيل وتتبع الشحنات الإشعاعية والفحص الآلي لمستويات الخطر.")
 
-# 3. الملخص والإحصائيات
-col1, col2, col3 = st.columns(3)
+
+if "containers_data" not in st.session_state:
+
+    st.session_state.containers_data = pd.DataFrame([
+        {
+            "المادة المشعة": "Tc-99m",
+            "رقم الحاوية": "RW-001",
+            "النشاط المقاس (MBq)": 500.0,
+            "تاريخ ووقت القياس": "24/09/2026 10:00",
+            "الكمية / الحجم": "100 mL",
+            "المغادرة / الموقع الحالي": "Nuclear Medicine - Storage",
+            "الجهة المصدرة / القسم": "Nuclear Medicine",
+            "حالة الحاوية": "Stored",
+            "حالة الأمان": "آمن"
+        }
+    ])
+
+
+
+
+df = st.session_state.containers_data
+
+col1, col2 = st.columns(2)
 with col1:
-    st.metric("إجمالي الشحنات", len(st.session_state.waste_data))
+    st.metric("إجمالي الحاويات المسجلة", len(df))
 with col2:
-    high_rad = len(
-        st.session_state.waste_data[
-            st.session_state.waste_data["حالة التخزين"].str.contains("تحذير")
-        ]
-    )
-    st.metric("حالات التحذير ⚠️", high_rad)
-with col3:
-    avg_act = st.session_state.waste_data["النشاط الإشعاعي (mCi)"].mean()
-    st.metric("متوسط الإشعاع", f"{avg_act:.1f} mCi")
+    high_risk_count = len(df[df["حالة الأمان"] == "تحذير - إشعاع مرتفع"])
+    st.metric("الحاويات ذات الإشعاع المرتفع (تحذير)", high_risk_count)
 
 st.divider()
 
-# 4. إدخال شحنة جديدة بسهولة
-with st.expander("➕ اضغط هنا لإضافة شحنة جديدة", expanded=False):
-    with st.form("add_form", clear_on_submit=True):
-        c1, c2 = st.columns(2)
-        with c1:
-            shipment_code = st.text_input("كود الشحنة", value="RAD-104")
-            isotope = st.selectbox(
-                "النظير المشع", ["Tc-99m", "I-131", "F-18", "غير ذلك"]
-            )
-        with c2:
-            activity = st.number_input(
-                "النشاط الإشعاعي (mCi)", min_value=0.0, value=250.0, step=10.0
-            )
-            location = st.selectbox(
-                "موقع التخزين",
-                ["مخزن A-1", "مخزن B-2", "مخزن C-1", "وحدة التفكيك"],
-            )
+st.subheader("📝 إدخال بيانات حاوية جديدة")
 
-        submit = st.form_submit_button("حفظ وإضافة")
+with st.form("add_container_form", clear_on_submit=True):
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        isotope = st.text_input("المادة المشعة", value="Tc-99m")
+        container_id = st.text_input("رقم الحاوية", value="RW-001")
+        activity = st.number_input("النشاط المقاس (MBq)", min_value=0.0, value=500.0, step=10.0)
+        
+    with c2:
+        meas_date = st.date_input("تاريخ القياس", value=date(2026, 9, 24))
+        meas_time = st.time_input("وقت القياس", value=time(10, 0))
+        volume = st.text_input("الكمية / الحجم", value="100 mL")
+        
+    with c3:
+        storage_location = st.text_input("الموقع الحالي / التخزين", value="Nuclear Medicine - Storage")
+        department = st.text_input("الجهة / القسم", value="Nuclear Medicine")
+        status = st.selectbox("حالة الحاوية", ["Stored", "In Transit", "Disposed", "Under Review"])
 
-        if submit:
-            if activity > 1000.0:
-                status = "تحذير - إشعاع مرتفع"
-                ai_note = "قيمة شاذة - يتطلب مراجعة العزل"
-            else:
-                status = "آمن"
-                ai_note = "ضمن الحدود الطبيعية"
+    submit_button = st.form_submit_button("إضافة الحاوية للنظام")
 
-            new_entry = {
-                "كود الشحنة": shipment_code,
-                "النظير المشع": isotope,
-                "النشاط الإشعاعي (mCi)": activity,
-                "حالة التخزين": status,
-                "الموقع": location,
-                "تحليل النظام": ai_note,
-            }
-            st.session_state.waste_data = pd.concat(
-                [st.session_state.waste_data, pd.DataFrame([new_entry])],
-                ignore_index=True,
-            )
-            st.success("تم الحفظ بنجاح!")
 
-# 5. عرض السجل والتنبيهات
-st.subheader("📋 سجل الشحنات المباشر")
-st.dataframe(st.session_state.waste_data, use_container_width=True)
 
-st.subheader("🔔 تنبيهات الأمان")
-anomalies = st.session_state.waste_data[
-    st.session_state.waste_data["حالة التخزين"].str.contains("تحذير")
+
+if submit_button:
+
+    full_datetime = f"{meas_date.strftime('%d/%m/%Y')} {meas_time.strftime('%H:%M')}"
+    
+    # شرط الفحص والتنبيه الآلي (تعتبر القراءة مرتفعة إذا تجاوزت 1000 MBq)
+    safety_status = "تحذير - إشعاع مرتفع" if activity > 1000 else "آمن"
+    
+
+    new_entry = {
+        "المادة المشعة": isotope,
+        "رقم الحاوية": container_id,
+        "النشاط المقاس (MBq)": activity,
+        "تاريخ ووقت القياس": full_datetime,
+        "الكمية / الحجم": volume,
+        "المغادرة / الموقع الحالي": storage_location,
+        "الجهة المصدرة / القسم": department,
+        "حالة الحاوية": status,
+        "حالة الأمان": safety_status
+    }
+    
+    st.session_state.containers_data = pd.concat(
+        [st.session_state.containers_data, pd.DataFrame([new_entry])], 
+        ignore_index=True
+    )
+    st.success(f"تمت إضافة الحاوية ({container_id}) بنجاح!")
+    st.rerun()
+
+# 
+
+# 
+st.divider()
+st.subheader("📊 سجل الحاويات والنفايات المشعة")
+
+
+high_risk_df = st.session_state.containers_data[
+    st.session_state.containers_data["حالة الأمان"] == "تحذير - إشعاع مرتفع"
 ]
 
-if not anomalies.empty:
-    for idx, row in anomalies.iterrows():
+if not high_risk_df.empty:
+    for _, row in high_risk_df.iterrows():
         st.error(
-            f"⚠️ تنبيه لشحنة [{row['كود الشحنة']}]: النظير ({row['النظير المشع']}) في {row['الموقع']} نشاطه مرتفع ({row['النشاط الإشعاعي (mCi)']} mCi) — {row['تحليل النظام']}"
+            f"⚠️️ تنبيه إشعاعي مرتفع! الحاوية **{row['رقم الحاوية']}** "
+            f"({row['المادة المشعة']}) في موقع **{row['المغادرة / الموقع الحالي']}** "
+            f"سجلت نشاطاً قادره **{row['النشاط المقاس (MBq)']} MBq**. يرجى مراجعة العزل فوراً!"
         )
-else:
-    st.success("✅ جميع الشحنات المسجلة آمنة.")
+
+
+st.dataframe(st.session_state.containers_data, use_container_width=True)
