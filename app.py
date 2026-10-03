@@ -12,38 +12,18 @@ st.set_page_config(page_title="HISN Smart Tag Dashboard", page_icon="☢️", la
 st.title("☢️ منصة تتبع حاويات النفايات المشعة الذكية (HISN Smart Tag)")
 st.write("نظام متكامل يستقبل القراءات عبر الـ API / Wi-Fi ويحللها بالذكاء الاصطناعي لحظياً.")
 
-# 🔊 دالة التنبيه الصوتي المتوافقة مع متصفحات الجوال
+# دالة لتشغيل صوت التنبيه التحذيري
 def play_alarm_sound():
-    sound_js = """
-    <script>
-    function playBeep() {
-        var context = new (window.AudioContext || window.webkitAudioContext)();
-        var osc = context.createOscillator();
-        var gain = context.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(880, context.currentTime); // تردد التنبيه
-        gain.gain.setValueAtTime(1, context.currentTime);
-        osc.connect(gain);
-        gain.connect(context.destination);
-        osc.start();
-        osc.stop(context.currentTime + 0.6); // مدة الصوت 0.6 ثانية
-    }
-    playBeep();
-    </script>
-    <button onclick="playBeep()" style="
-        background-color: #ff4b4b;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        font-size: 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        width: 100%;
-        margin-top: 5px;">
-        🔊 اضغطي هنا لسماع / إعادة تشغيل صفارة التنبيه
-    </button>
-    """
-    st.components.v1.html(sound_js, height=60)
+    # صوت صفارة تحذيرية قصيرة (Audio Alert)
+    sound_url = "https://www.soundjay.com/buttons/sounds/beep-07a.mp3"
+    st.components.v1.html(
+        f"""
+        <audio autoplay style="display:none;">
+            <source src="{sound_url}" type="audio/mpeg">
+        </audio>
+        """,
+        height=0,
+    )
 
 # ---------------------------------------------------------
 # 2. تهيئة ذاكرة البيانات
@@ -283,7 +263,7 @@ if not st.session_state.containers_data.empty:
                 f"يرجى إعادة شحن الجهاز أو استبدال البطارية فوراً لتجنب توقف المراقبة الإشعاعية."
             )
 
-    # تشغيل الصوت وإظهار زر التحكم إذا وجد تنبيه
+    # تشغيل الصوت إذا كان هناك خطر إشعاعي أو بطارية منخفضة
     if should_alarm:
         play_alarm_sound()
 
