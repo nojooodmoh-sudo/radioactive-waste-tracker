@@ -35,7 +35,7 @@ df = st.session_state.containers_data
 # ---------------------------------------------------------
 # 3. لوحة المؤشرات السريعة (Metrics)
 # ---------------------------------------------------------
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.metric("إجمالي الحاويات الذكية", len(df))
 with col2:
@@ -44,6 +44,9 @@ with col2:
 with col3:
     moving_count = len(df[df["حالة الحركة"] == "قيد نقل (Moving)"]) if not df.empty else 0
     st.metric("الحاويات المتحركة حالياً", moving_count)
+with col4:
+    low_battery_count = len(df[df["مستوى البطارية (%)"] <= 20]) if not df.empty else 0
+    st.metric("تنبيهات انخفاض البطارية 🔋", low_battery_count)
 
 st.divider()
 
@@ -62,43 +65,67 @@ with col_api2:
     st.write(" ")
     fetch_real_api = st.button("🌐 جلب البيانات الحقيقية من الموقع عبر API")
 
-# إجراء عملية الجلب عند الضغط على زر الـ API الحقيقي
 if fetch_real_api:
     try:
         response = requests.get(api_url_input, timeout=3)
         if response.status_code == 200:
-            api_data = response.json()
-            # إضافة البيانات القادمة من الـ API إلى الجدول
             st.success("تم جلب البيانات الحية بنجاح من الموقع/الخادم!")
         else:
             st.warning(f"لم يتم العثور على استجابة من السيرفر (رمز الحالة: {response.status_code}). يمكنك استخدام المحاكاة أدناه.")
     except Exception as e:
         st.info("تعذر الاتصال بالخادم المباشر حالياً (الموديل يعمل بنمط المحاكاة المباشرة للعرض).")
 
-# زر المحاكاة للتقديم والسلاسة أمام اللجنة
-if st.button("📲 محاكاة استقبال بيانات حية من جهاز (HISN-001) عبر Wi-Fi"):
-    now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
-    
-    wifi_entry = {
-        "معرف الجهاز (Tag ID)": "HISN-001",
-        "المادة المشعة": "Tc-99m",
-        "النشاط المقاس (MBq)": 500.0,
-        "الحجم المقدر بالـ AI (mL)": 8500.0,
-        "تاريخ ووقت القياس": now_str,
-        "طريقة الاتصال": "Wi-Fi",
-        "الموقع الحالي": "Storage Room A",
-        "حالة الحركة": "ثابت (Stationary)",
-        "مستوى البطارية (%)": 78,
-        "موعد التخلص المتوقع (AI Prediction)": (datetime.now() + timedelta(hours=14)).strftime('%d/%m/%Y %H:%M'),
-        "حالة الأمان والـ AI": "آمن - مستقر"
-    }
-    
-    st.session_state.containers_data = pd.concat(
-        [st.session_state.containers_data, pd.DataFrame([wifi_entry])], 
-        ignore_index=True
-    )
-    st.success("تم استقبال حزمة البيانات الحية من جهاز HISN-001 عبر الـ Wi-Fi بنجاح!")
-    st.rerun()
+# زر المحاكاة للتقديم والسلاسة أمام اللجنة (يحتوي على محاكاة بطارية منخفضة لاختبار التنبيه)
+c_btn1, c_btn2 = st.columns(2)
+with c_btn1:
+    if st.button("📲 محاكاة استقبال بيانات حية من جهاز (HISN-001) عبر Wi-Fi"):
+        now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
+        
+        wifi_entry = {
+            "معرف الجهاز (Tag ID)": "HISN-001",
+            "المادة المشعة": "Tc-99m",
+            "النشاط المقاس (MBq)": 500.0,
+            "الحجم المقدر بالـ AI (mL)": 8500.0,
+            "تاريخ ووقت القياس": now_str,
+            "طريقة الاتصال": "Wi-Fi",
+            "الموقع الحالي": "Storage Room A",
+            "حالة الحركة": "ثابت (Stationary)",
+            "مستوى البطارية (%)": 78,
+            "موعد التخلص المتوقع (AI Prediction)": (datetime.now() + timedelta(hours=14)).strftime('%d/%m/%Y %H:%M'),
+            "حالة الأمان والـ AI": "آمن - مستقر"
+        }
+        
+        st.session_state.containers_data = pd.concat(
+            [st.session_state.containers_data, pd.DataFrame([wifi_entry])], 
+            ignore_index=True
+        )
+        st.success("تم استقبال حزمة البيانات الحية من جهاز HISN-001 عبر الـ Wi-Fi بنجاح!")
+        st.rerun()
+
+with c_btn2:
+    if st.button("⚠️ محاكاة جهاز بطاريته منخفضة جداً (HISN-002)"):
+        now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
+        
+        low_bat_entry = {
+            "معرف الجهاز (Tag ID)": "HISN-002",
+            "المادة المشعة": "I-131",
+            "النشاط المقاس (MBq)": 150.0,
+            "الحجم المقدر بالـ AI (mL)": 4200.0,
+            "تاريخ ووقت القياس": now_str,
+            "طريقة الاتصال": "Wi-Fi",
+            "الموقع الحالي": "Storage Room B",
+            "حالة الحركة": "ثابت (Stationary)",
+            "مستوى البطارية (%)": 10,  # بطارية منخفضة لاختبار التنبيه
+            "موعد التخلص المتوقع (AI Prediction)": (datetime.now() + timedelta(hours=48)).strftime('%d/%m/%Y %H:%M'),
+            "حالة الأمان والـ AI": "تنبيه - بطارية منخفضة جداً"
+        }
+        
+        st.session_state.containers_data = pd.concat(
+            [st.session_state.containers_data, pd.DataFrame([low_bat_entry])], 
+            ignore_index=True
+        )
+        st.warning("تم إدراج جهاز بطاريته منخفضة لاختبار نظام التنبيه!")
+        st.rerun()
 
 st.divider()
 
@@ -119,7 +146,7 @@ with st.form("smart_container_form", clear_on_submit=True):
     c1, c2, c3 = st.columns(3)
     
     with c1:
-        container_id = st.text_input("معرف الجهاز / الحاوية", placeholder="مثال: HISN-002")
+        container_id = st.text_input("معرف الجهاز / الحاوية", placeholder="مثال: HISN-003")
         isotope = st.selectbox("المادة المشعة", list(HALF_LIVES.keys()))
         activity = st.number_input("قراءة حساس الإشعاع (MBq)", min_value=0.0, value=0.0, step=10.0)
         
@@ -161,6 +188,9 @@ if submit_button:
             
         if motion_status == "قيد نقل (Moving)" and activity > 800:
             ai_status += " | خطر نقل مادة عالية الإشعاع"
+            
+        if battery_lvl <= 15:
+            ai_status += " | 🔋 خطر: البطارية على وشك النفاد!"
 
         new_entry = {
             "معرف الجهاز (Tag ID)": container_id,
@@ -184,12 +214,14 @@ if submit_button:
         st.rerun()
 
 # ---------------------------------------------------------
-# 6. عرض جدول البيانات المباشر والتنبيهات
+# 6. عرض جدول البيانات المباشر والتنبيهات والبحث المتقدم
 # ---------------------------------------------------------
 st.divider()
-st.subheader("📊 لوحة المراقبة والتنبؤات الحية (Live IoT Dashboard)")
+st.subheader("📊 لوحة المراقبة والسجلات المسبقة (Live IoT Dashboard)")
 
 if not st.session_state.containers_data.empty:
+    
+    # 🔴 1. تنبيهات الشذوذ الإشعاعي والخطر
     high_risk_df = st.session_state.containers_data[
         st.session_state.containers_data["حالة الأمان والـ AI"].str.contains("تحذير", na=False)
     ]
@@ -197,12 +229,43 @@ if not st.session_state.containers_data.empty:
     if not high_risk_df.empty:
         for _, row in high_risk_df.iterrows():
             st.error(
-                f"⚠ **تنبيه ذكاء اصطناعي!** الجهاز **{row['معرف الجهاز (Tag ID)']}** ({row['المادة المشعة']}) "
-                f"سجل قراءة إشعاع **{row['النشاط المقاس (MBq)']} MBq** عبر **{row['طريقة الاتصال']}**. "
-                f"الموقع: **{row['الموقع الحالي']}**. الحركة: **{row['حالة الحركة']}**. "
-                f"التشخيص: {row['حالة الأمان والـ AI']}."
+                f"🚨 **تنبيه إشعاعي!** الجهاز **{row['معرف الجهاز (Tag ID)']}** ({row['المادة المشعة']}) "
+                f"سجل قراءة **{row['النشاط المقاس (MBq)']} MBq**. "
+                f"الموقع: **{row['الموقع الحالي']}**. التشخيص: {row['حالة الأمان والـ AI']}."
             )
 
-    st.dataframe(st.session_state.containers_data, use_container_width=True)
+    # 🔋 2. تنبيهات انخفاض/انطفاء البطارية التلقائية
+    low_battery_df = st.session_state.containers_data[
+        st.session_state.containers_data["مستوى البطارية (%)"] <= 20
+    ]
+
+    if not low_battery_df.empty:
+        for _, row in low_battery_df.iterrows():
+            st.error(
+                f"🔋 **تنبيه طاقة حرِج (Battery Warning)!** الجهاز **{row['معرف الجهاز (Tag ID)']}** "
+                f"وصل مستوى البطارية فيه إلى **{row['مستوى البطارية (%)']}%** فقط! "
+                f"يرجى إعادة شحن الجهاز أو استبدال البطارية فوراً لتجنب توقف المراقبة الإشعاعية."
+            )
+
+    # 🔍 3. أدوات البحث والتصفية للاختبارات المسبقة
+    s1, s2 = st.columns(2)
+    with s1:
+        search_query = st.text_input("🔍 البحث عن عنصر أو حاوية مختبرة سابقاً:", placeholder="أدخل رقم الحاوية أو اسم المادة...")
+    with s2:
+        isotope_filter = st.selectbox("تصفية النتائج حسب المادة المشعة:", ["الكل"] + list(st.session_state.containers_data["المادة المشعة"].unique()))
+
+    # فلترة الجدول
+    filtered_df = st.session_state.containers_data.copy()
+
+    if search_query:
+        filtered_df = filtered_df[
+            filtered_df["معرف الجهاز (Tag ID)"].astype(str).str.contains(search_query, case=False, na=False) |
+            filtered_df["المادة المشعة"].astype(str).str.contains(search_query, case=False, na=False)
+        ]
+
+    if isotope_filter != "الكل":
+        filtered_df = filtered_df[filtered_df["المادة المشعة"] == isotope_filter]
+
+    st.dataframe(filtered_df, use_container_width=True)
 else:
-    st.info("في انتظار استقبال بيانات من أجهزة HISN Smart Tag عبر الـ Wi-Fi / API...")
+    st.info("في انتظار استقبال بيانات من أجهزة HISN Smart Tag عبر الـ Wi-Fi / API أو إدخال اختبار جديد...")
