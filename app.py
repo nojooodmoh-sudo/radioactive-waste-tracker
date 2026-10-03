@@ -12,6 +12,19 @@ st.set_page_config(page_title="HISN Smart Tag Dashboard", page_icon="☢️", la
 st.title("☢️ منصة تتبع حاويات النفايات المشعة الذكية (HISN Smart Tag)")
 st.write("نظام متكامل يستقبل القراءات عبر الـ API / Wi-Fi ويحللها بالذكاء الاصطناعي لحظياً.")
 
+# دالة لتشغيل صوت التنبيه التحذيري
+def play_alarm_sound():
+    # صوت صفارة تحذيرية قصيرة (Audio Alert)
+    sound_url = "https://www.soundjay.com/buttons/sounds/beep-07a.mp3"
+    st.components.v1.html(
+        f"""
+        <audio autoplay style="display:none;">
+            <source src="{sound_url}" type="audio/mpeg">
+        </audio>
+        """,
+        height=0,
+    )
+
 # ---------------------------------------------------------
 # 2. تهيئة ذاكرة البيانات
 # ---------------------------------------------------------
@@ -75,7 +88,6 @@ if fetch_real_api:
     except Exception as e:
         st.info("تعذر الاتصال بالخادم المباشر حالياً (الموديل يعمل بنمط المحاكاة المباشرة للعرض).")
 
-# زر المحاكاة للتقديم والسلاسة أمام اللجنة (يحتوي على محاكاة بطارية منخفضة لاختبار التنبيه)
 c_btn1, c_btn2 = st.columns(2)
 with c_btn1:
     if st.button("📲 محاكاة استقبال بيانات حية من جهاز (HISN-001) عبر Wi-Fi"):
@@ -115,7 +127,7 @@ with c_btn2:
             "طريقة الاتصال": "Wi-Fi",
             "الموقع الحالي": "Storage Room B",
             "حالة الحركة": "ثابت (Stationary)",
-            "مستوى البطارية (%)": 10,  # بطارية منخفضة لاختبار التنبيه
+            "مستوى البطارية (%)": 10,
             "موعد التخلص المتوقع (AI Prediction)": (datetime.now() + timedelta(hours=48)).strftime('%d/%m/%Y %H:%M'),
             "حالة الأمان والـ AI": "تنبيه - بطارية منخفضة جداً"
         }
@@ -124,13 +136,13 @@ with c_btn2:
             [st.session_state.containers_data, pd.DataFrame([low_bat_entry])], 
             ignore_index=True
         )
-        st.warning("تم إدراج جهاز بطاريته منخفضة لاختبار نظام التنبيه!")
+        st.warning("تم إدراج جهاز بطاريته منخفضة لاختبار نظام التنبيه الصوتي والحركي!")
         st.rerun()
 
 st.divider()
 
 # ---------------------------------------------------------
-# 5. نموذج إدخال / تسجيل جهاز يدوي (معالجة الذكاء الاصطناعي)
+# 5. نموذج إدخال / تسجيل جهاز يدوي
 # ---------------------------------------------------------
 st.subheader("📝 إدخال / تسجيل جهاز يدوي")
 
@@ -214,19 +226,22 @@ if submit_button:
         st.rerun()
 
 # ---------------------------------------------------------
-# 6. عرض جدول البيانات المباشر والتنبيهات والبحث المتقدم
+# 6. عرض جدول البيانات المباشر والتنبيهات الصوتية والبصرية
 # ---------------------------------------------------------
 st.divider()
 st.subheader("📊 لوحة المراقبة والسجلات المسبقة (Live IoT Dashboard)")
 
 if not st.session_state.containers_data.empty:
     
-    # 🔴 1. تنبيهات الشذوذ الإشعاعي والخطر
+    should_alarm = False
+
+    # 🔴 1. تنبيهات الشذوذ الإشعاعي
     high_risk_df = st.session_state.containers_data[
         st.session_state.containers_data["حالة الأمان والـ AI"].str.contains("تحذير", na=False)
     ]
 
     if not high_risk_df.empty:
+        should_alarm = True
         for _, row in high_risk_df.iterrows():
             st.error(
                 f"🚨 **تنبيه إشعاعي!** الجهاز **{row['معرف الجهاز (Tag ID)']}** ({row['المادة المشعة']}) "
@@ -240,21 +255,25 @@ if not st.session_state.containers_data.empty:
     ]
 
     if not low_battery_df.empty:
+        should_alarm = True
         for _, row in low_battery_df.iterrows():
             st.error(
-                f"🔋 **تنبيه طاقة حرِج (Battery Warning)!** الجهاز **{row['معرف الجهاز (Tag ID)']}** "
+                f"🔊 🔋 **تنبيه طاقة حرِج (Battery Alarm)!** الجهاز **{row['معرف الجهاز (Tag ID)']}** "
                 f"وصل مستوى البطارية فيه إلى **{row['مستوى البطارية (%)']}%** فقط! "
                 f"يرجى إعادة شحن الجهاز أو استبدال البطارية فوراً لتجنب توقف المراقبة الإشعاعية."
             )
 
-    # 🔍 3. أدوات البحث والتصفية للاختبارات المسبقة
+    # تشغيل الصوت إذا كان هناك خطر إشعاعي أو بطارية منخفضة
+    if should_alarm:
+        play_alarm_sound()
+
+    # 🔍 3. أدوات البحث والتصفية
     s1, s2 = st.columns(2)
     with s1:
         search_query = st.text_input("🔍 البحث عن عنصر أو حاوية مختبرة سابقاً:", placeholder="أدخل رقم الحاوية أو اسم المادة...")
     with s2:
         isotope_filter = st.selectbox("تصفية النتائج حسب المادة المشعة:", ["الكل"] + list(st.session_state.containers_data["المادة المشعة"].unique()))
 
-    # فلترة الجدول
     filtered_df = st.session_state.containers_data.copy()
 
     if search_query:
